@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Start Stop Fun</title>
+  </head>
+  <body>
+    <button id="Start1">Start</button>
+    <button id="Stop1">Stop</button>
+    <button id="Start2">Start</button>
+    <button id="Stop2">Stop</button>
+    <button id="Start3">Start</button>
+    <button id="Stop3">Stop</button>
+    <button id="Start4">Start</button>
+    <button id="Stop4">Stop</button>
+    <script>
+      const ctx = new AudioContext();
+
+      const myGain = new GainNode(ctx);
+      myGain.gain.value = 0.125;
+
+      myGain.connect(ctx.destination);
+
+      document.querySelector("#Start1").onclick = () => {
+        ctx.resume();
+        const now = ctx.currentTime;
+
+        // ADSR timing (seconds) + levels
+        const attack = 0.05;
+        const decay = 0.1;
+        const sustainLevel = 0.7; // fraction of peak
+        const sustainTime = 0.3; // how long to hold sustain
+        const release = 0.4;
+        const peak = 1.0; // relative to envelope gain's own scale
+
+        const duration = attack + decay + sustainTime + release;
+
+        // Per-note envelope, sits between the oscillators and myGain
+        const env = new GainNode(ctx);
+        env.gain.setValueAtTime(0, now);
+        env.gain.linearRampToValueAtTime(peak, now + attack);
+        env.gain.linearRampToValueAtTime(sustainLevel, now + attack + decay);
+        env.gain.setValueAtTime(
+          sustainLevel,
+          now + attack + decay + sustainTime,
+        ); // hold
+        env.gain.linearRampToValueAtTime(0, now + duration);
+
+        env.connect(myGain);
+
+        let freq = 110;
+        const osc1 = new OscillatorNode(ctx, {
+          frequency: freq,
+          type: "triangle",
+        });
+        const osc2 = new OscillatorNode(ctx, {
+          frequency: freq * 1.001,
+          type: "triangle",
+        });
+        const osc3 = new OscillatorNode(ctx, {
+          frequency: freq * 0.966,
+          type: "triangle",
+        });
+
+        osc1.connect(env);
+        osc2.connect(env);
+        osc3.connect(env);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc3.start(now);
+
+        // auto-stop right after the envelope finishes
+        osc1.stop(now + duration + 0.05);
+        osc2.stop(now + duration + 0.05);
+        osc3.stop(now + duration + 0.05);
+      };
+    </script>
+  </body>
+</html>
